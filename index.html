@@ -11196,7 +11196,7 @@ var _user$project$Main$updatePos = F2(
 	function (pos, dim) {
 		return (_elm_lang$core$Native_Utils.cmp(pos, dim) > 0) ? (0 - dim) : ((_elm_lang$core$Native_Utils.cmp(pos, 0 - dim) < 0) ? dim : pos);
 	});
-var _user$project$Main$stepObj = F2(
+var _user$project$Main$stepAsteroid = F2(
 	function (t, _p0) {
 		var _p1 = _p0;
 		return _elm_lang$core$Native_Utils.update(
@@ -11210,6 +11210,17 @@ var _user$project$Main$near = F3(
 var _user$project$Main$within = F2(
 	function (spaceship, asteroid) {
 		return A3(_user$project$Main$near, spaceship.x, 10, asteroid.x) && A3(_user$project$Main$near, spaceship.y, 10, asteroid.y);
+	});
+var _user$project$Main$isCollided = F2(
+	function (spaceship, asteroids) {
+		return A3(
+			_elm_lang$core$List$foldr,
+			F2(
+				function (asteroid, prev) {
+					return prev || A2(_user$project$Main$within, spaceship, asteroid);
+				}),
+			false,
+			asteroids);
 	});
 var _user$project$Main$generateAsteroid = function (seed) {
 	return {
@@ -11256,8 +11267,8 @@ var _user$project$Main$gameHeight = _user$project$Main$_p2._1;
 var _user$project$Main$_p3 = {ctor: '_Tuple2', _0: _user$project$Main$gameWidth / 2, _1: _user$project$Main$gameHeight / 2};
 var _user$project$Main$halfWidth = _user$project$Main$_p3._0;
 var _user$project$Main$halfHeight = _user$project$Main$_p3._1;
-var _user$project$Main$stepSpaceShip = F2(
-	function (t, spaceship) {
+var _user$project$Main$stepSpaceShip = F3(
+	function (t, spaceship, asteroids) {
 		var _p4 = spaceship;
 		var x = _p4.x;
 		var y = _p4.y;
@@ -11389,7 +11400,7 @@ var _user$project$Main$update = F2(
 				var timeSeed = _p9.timeSeed;
 				var newState = state;
 				var newTime = gameTime + _p10;
-				var newSpaceship = _elm_lang$core$Native_Utils.eq(state, _user$project$Main$Pause) ? spaceship : A2(_user$project$Main$stepSpaceShip, _p10, spaceship);
+				var tempSpaceship = _elm_lang$core$Native_Utils.eq(state, _user$project$Main$Pause) ? spaceship : A3(_user$project$Main$stepSpaceShip, _p10, spaceship, asteroids);
 				var flooredTime = _elm_lang$core$Basics$floor(
 					_elm_lang$core$Time$inMilliseconds(timeSeed));
 				var newAsteroids = _elm_lang$core$Native_Utils.eq(
@@ -11399,8 +11410,9 @@ var _user$project$Main$update = F2(
 					_user$project$Main$generateAsteroid(flooredTime),
 					asteroids) : A2(
 					_elm_lang$core$List$map,
-					_user$project$Main$stepObj(_p10),
+					_user$project$Main$stepAsteroid(_p10),
 					asteroids);
+				var newSpaceship = A2(_user$project$Main$isCollided, tempSpaceship, newAsteroids) ? A2(_user$project$Main$makespaceship, 0, 0) : tempSpaceship;
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{state: newState, spaceship: newSpaceship, asteroids: newAsteroids, gameTime: newTime});

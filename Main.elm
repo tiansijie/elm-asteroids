@@ -91,8 +91,12 @@ within spaceship asteroid =
     && near spaceship.y 10 asteroid.y
 
 
-stepObj : Time -> Asteroid -> Asteroid
-stepObj t ({x, y, vx, vy, dirX, dirY} as asteroid) =
+isCollided: SpaceShip -> List Asteroid -> Bool
+isCollided spaceship asteroids =
+  List.foldr (\asteroid prev -> prev || (within spaceship asteroid)) False asteroids
+
+stepAsteroid : Time -> Asteroid -> Asteroid
+stepAsteroid t ({x, y, vx, vy, dirX, dirY} as asteroid) =
   { asteroid |
     x = x + vx * dirX * t,
     y = y + vy * dirY * t
@@ -109,8 +113,8 @@ updatePos pos dim =
     pos
 
 
-stepSpaceShip: Time -> SpaceShip -> SpaceShip
-stepSpaceShip t spaceship =
+stepSpaceShip: Time -> SpaceShip -> List Asteroid -> SpaceShip
+stepSpaceShip t spaceship asteroids=
   let
     {x, y, vx, vy, dirX, dirY, a} = spaceship
 
@@ -187,20 +191,26 @@ update msg model =
 
         newTime = gameTime + delta
 
-        newSpaceship =
+        tempSpaceship =
           if state == Pause then
             spaceship
           else
-            stepSpaceShip delta spaceship
+            stepSpaceShip delta spaceship asteroids
 
         flooredTime =
           floor (inMilliseconds timeSeed)
 
         newAsteroids =
-          if flooredTime % 2 == 0 then
+          if flooredTime % 10 == 0 then
             (generateAsteroid flooredTime) :: asteroids
           else
-            List.map (stepObj delta) asteroids
+            List.map (stepAsteroid delta) asteroids
+
+        newSpaceship =
+          if isCollided tempSpaceship newAsteroids then
+            makespaceship 0 0
+          else
+            tempSpaceship
 
       in
         { model |
