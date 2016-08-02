@@ -3,7 +3,6 @@ import Keyboard
 import Html.App as App
 import Task
 import Text
-import Debug
 import AnimationFrame
 import Html exposing (..)
 import Color exposing (..)
@@ -42,7 +41,8 @@ type alias Model = {
   state: State,
   asteroids: List Asteroid,
   spaceship: SpaceShip,
-  gameTime: Time
+  gameTime: Time,
+  timeSeed: Time
 }
 
 
@@ -51,15 +51,15 @@ makespaceship x y =
   {x = x, y = y, vx = 1, vy = 1, dirX = 0, dirY = 0, a = 0, degree = 0}
 
 
-generateAsteroid: Random.Seed -> Asteroid
+generateAsteroid: Int -> Asteroid
 generateAsteroid seed =
   {
-    x = fst (Random.step (Random.float -300 300) seed),
-    y = fst (Random.step (Random.float -50 50) seed),
-    vx = 30,
-    vy = 30,
-    dirX = 1,
-    dirY = 1,
+    x = fst (Random.step (Random.float -300 300) (Random.initialSeed seed)),
+    y = fst (Random.step (Random.float -100 100) (Random.initialSeed (seed+1))),
+    vx = fst (Random.step (Random.float -30 30) (Random.initialSeed seed)),
+    vy = fst (Random.step (Random.float -30 30) (Random.initialSeed (seed+1))),
+    dirX = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed))),
+    dirY = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed+1))),
     degree = 0
   }
 
@@ -69,7 +69,8 @@ defaultModel =
     state = Pause,
     spaceship = makespaceship 0 0,
     asteroids = [],
-    gameTime = 0
+    gameTime = 0,
+    timeSeed = 0
   }
 
 init =
@@ -136,6 +137,7 @@ stepSpaceShip t spaceship =
 type Msg
   = SpaceShip Float Float
   | Tick Time
+  | TickTotal Time
   | TogglePlay
   | NoOp
 
@@ -172,9 +174,14 @@ update msg model =
       in
         { model | state = newState }
 
+    TickTotal now ->
+        { model |
+           timeSeed = now
+        }
+
     Tick delta ->
       let
-        { state, spaceship, asteroids, gameTime } = model
+        { state, spaceship, asteroids, gameTime, timeSeed } = model
 
         newState = state
 
@@ -187,11 +194,11 @@ update msg model =
             stepSpaceShip delta spaceship
 
         flooredTime =
-          floor (inMilliseconds newTime)
+          floor (inMilliseconds timeSeed)
 
         newAsteroids =
-          if flooredTime % 10 == 0 then
-            (generateAsteroid (Random.initialSeed flooredTime)) :: asteroids
+          if flooredTime % 2 == 0 then
+            (generateAsteroid flooredTime) :: asteroids
           else
             List.map (stepObj delta) asteroids
 
@@ -248,7 +255,7 @@ view model =
   let
     { spaceship, asteroids, gameTime, state } = model
     times =
-      txt (Text.height 50) (toString (inMilliseconds gameTime))
+      txt (Text.height 50) (toString (floor (inMilliseconds gameTime)))
   in
     toHtml <|
     container 1000 700 middle <|
@@ -281,5 +288,6 @@ main =
         , Keyboard.ups (keyboardProcessor False)
         , Keyboard.presses (keyboardProcessor True)
         , AnimationFrame.diffs (Tick<<inSeconds)
+        , Time.every second TickTotal
         ])
     }

@@ -11217,16 +11217,32 @@ var _user$project$Main$generateAsteroid = function (seed) {
 			A2(
 				_elm_lang$core$Random$step,
 				A2(_elm_lang$core$Random$float, -300, 300),
-				seed)),
+				_elm_lang$core$Random$initialSeed(seed))),
 		y: _elm_lang$core$Basics$fst(
 			A2(
 				_elm_lang$core$Random$step,
-				A2(_elm_lang$core$Random$float, -50, 50),
-				seed)),
-		vx: 30,
-		vy: 30,
-		dirX: 1,
-		dirY: 1,
+				A2(_elm_lang$core$Random$float, -100, 100),
+				_elm_lang$core$Random$initialSeed(seed + 1))),
+		vx: _elm_lang$core$Basics$fst(
+			A2(
+				_elm_lang$core$Random$step,
+				A2(_elm_lang$core$Random$float, -30, 30),
+				_elm_lang$core$Random$initialSeed(seed))),
+		vy: _elm_lang$core$Basics$fst(
+			A2(
+				_elm_lang$core$Random$step,
+				A2(_elm_lang$core$Random$float, -30, 30),
+				_elm_lang$core$Random$initialSeed(seed + 1))),
+		dirX: _elm_lang$core$Basics$fst(
+			A2(
+				_elm_lang$core$Random$step,
+				A2(_elm_lang$core$Random$float, -1, 1),
+				_elm_lang$core$Random$initialSeed(seed))),
+		dirY: _elm_lang$core$Basics$fst(
+			A2(
+				_elm_lang$core$Random$step,
+				A2(_elm_lang$core$Random$float, -1, 1),
+				_elm_lang$core$Random$initialSeed(seed + 1))),
 		degree: 0
 	};
 };
@@ -11297,7 +11313,8 @@ var _user$project$Main$view = function (model) {
 		_user$project$Main$txt,
 		_evancz$elm_graphics$Text$height(50),
 		_elm_lang$core$Basics$toString(
-			_elm_lang$core$Time$inMilliseconds(gameTime)));
+			_elm_lang$core$Basics$floor(
+				_elm_lang$core$Time$inMilliseconds(gameTime))));
 	return _evancz$elm_graphics$Element$toHtml(
 		A4(
 			_evancz$elm_graphics$Element$container,
@@ -11310,9 +11327,9 @@ var _user$project$Main$view = function (model) {
 				_user$project$Main$gameHeight,
 				A3(_user$project$Main$listDisplay, spaceship, asteroids, times))));
 };
-var _user$project$Main$Model = F4(
-	function (a, b, c, d) {
-		return {state: a, asteroids: b, spaceship: c, gameTime: d};
+var _user$project$Main$Model = F5(
+	function (a, b, c, d, e) {
+		return {state: a, asteroids: b, spaceship: c, gameTime: d, timeSeed: e};
 	});
 var _user$project$Main$Pause = {ctor: 'Pause'};
 var _user$project$Main$defaultModel = {
@@ -11320,7 +11337,8 @@ var _user$project$Main$defaultModel = {
 	spaceship: A2(_user$project$Main$makespaceship, 0, 0),
 	asteroids: _elm_lang$core$Native_List.fromArray(
 		[]),
-	gameTime: 0
+	gameTime: 0,
+	timeSeed: 0
 };
 var _user$project$Main$init = {ctor: '_Tuple2', _0: _user$project$Main$defaultModel, _1: _elm_lang$core$Platform_Cmd$none};
 var _user$project$Main$Play = {ctor: 'Play'};
@@ -11357,6 +11375,10 @@ var _user$project$Main$update = F2(
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{state: newState});
+			case 'TickTotal':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{timeSeed: _p6._0});
 			default:
 				var _p10 = _p6._0;
 				var _p9 = model;
@@ -11364,17 +11386,17 @@ var _user$project$Main$update = F2(
 				var spaceship = _p9.spaceship;
 				var asteroids = _p9.asteroids;
 				var gameTime = _p9.gameTime;
+				var timeSeed = _p9.timeSeed;
 				var newState = state;
 				var newTime = gameTime + _p10;
-				var flooredTime = _elm_lang$core$Basics$floor(
-					_elm_lang$core$Time$inMilliseconds(newTime));
 				var newSpaceship = _elm_lang$core$Native_Utils.eq(state, _user$project$Main$Pause) ? spaceship : A2(_user$project$Main$stepSpaceShip, _p10, spaceship);
+				var flooredTime = _elm_lang$core$Basics$floor(
+					_elm_lang$core$Time$inMilliseconds(timeSeed));
 				var newAsteroids = _elm_lang$core$Native_Utils.eq(
-					A2(_elm_lang$core$Basics_ops['%'], flooredTime, 10),
+					A2(_elm_lang$core$Basics_ops['%'], flooredTime, 2),
 					0) ? A2(
 					_elm_lang$core$List_ops['::'],
-					_user$project$Main$generateAsteroid(
-						_elm_lang$core$Random$initialSeed(flooredTime)),
+					_user$project$Main$generateAsteroid(flooredTime),
 					asteroids) : A2(
 					_elm_lang$core$List$map,
 					_user$project$Main$stepObj(_p10),
@@ -11386,6 +11408,9 @@ var _user$project$Main$update = F2(
 	});
 var _user$project$Main$NoOp = {ctor: 'NoOp'};
 var _user$project$Main$TogglePlay = {ctor: 'TogglePlay'};
+var _user$project$Main$TickTotal = function (a) {
+	return {ctor: 'TickTotal', _0: a};
+};
 var _user$project$Main$Tick = function (a) {
 	return {ctor: 'Tick', _0: a};
 };
@@ -11452,7 +11477,8 @@ var _user$project$Main$main = {
 							function (_p13) {
 								return _user$project$Main$Tick(
 									_elm_lang$core$Time$inSeconds(_p13));
-							})
+							}),
+							A2(_elm_lang$core$Time$every, _elm_lang$core$Time$second, _user$project$Main$TickTotal)
 						]));
 			}
 		})
