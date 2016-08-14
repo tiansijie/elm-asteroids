@@ -11,7 +11,7 @@ import Element exposing (..)
 import List
 import Random
 
-(gameWidth, gameHeight) = (600, 400)
+(gameWidth, gameHeight) = (800, 600)
 (halfWidth, halfHeight) = (gameWidth / 2, gameHeight / 2)
 
 type alias Object base =
@@ -31,6 +31,9 @@ type alias Asteroid =
   Object {}
 
 
+type alias Bullet =
+  Object {}
+
 type alias SpaceShip =
   Object {a: Float}
 
@@ -40,6 +43,7 @@ type State = Play | Pause
 type alias Model = {
   state: State,
   asteroids: List Asteroid,
+  bullets: List Bullet,
   spaceship: SpaceShip,
   gameTime: Time,
   timeSeed: Time
@@ -49,6 +53,10 @@ type alias Model = {
 makespaceship: Float -> Float -> SpaceShip
 makespaceship x y =
   {x = x, y = y, vx = 1, vy = 1, dirX = 0, dirY = 0, a = 0, degree = 0}
+
+makeBullet: Float -> Float -> Float -> Float -> Float -> Float -> Bullet
+makeBullet x y vx vy dirX dirY =
+  {x = x, y = y, vx = vx, vy = vy, dirX = dirX, dirY = dirY, degree = 0}
 
 
 generateAsteroid: Int -> Asteroid
@@ -66,9 +74,10 @@ generateAsteroid seed =
 defaultModel: Model
 defaultModel =
   {
-    state = Pause,
+    state = Play,
     spaceship = makespaceship 0 0,
     asteroids = [],
+    bullets = [],
     gameTime = 0,
     timeSeed = 0
   }
@@ -102,6 +111,12 @@ stepAsteroid t ({x, y, vx, vy, dirX, dirY} as asteroid) =
     y = y + vy * dirY * t
   }
 
+stepBullet: Time -> Bullet -> Bullet
+stepBullet t ({x, y, vx, vy, dirX, dirY} as bullet) =
+  { bullet |
+    x = x + vx * dirX * t,
+    y = y + vy * dirY * t
+  }
 
 updatePos: Float -> Float -> Float
 updatePos pos dim =
@@ -142,6 +157,7 @@ type Msg
   = SpaceShip Float Float
   | Tick Time
   | TickTotal Time
+  | ShootBullet
   | TogglePlay
   | NoOp
 
@@ -154,7 +170,7 @@ update msg model =
     SpaceShip deltaDegree deltaA ->
       let
         { spaceship } = model
-        a' = spaceship.a + deltaA
+        a' = deltaA
         degree = spaceship.degree + deltaDegree
         dirX = negate (sin degree)
         dirY = cos degree
@@ -167,6 +183,23 @@ update msg model =
                 a = a',
                 degree = degree
             }
+        }
+
+    ShootBullet ->
+      let
+        { spaceship, bullets } = model
+        x = spaceship.x
+        y = spaceship.y
+        dirX = spaceship.dirX
+        dirY = spaceship.dirY
+        vx = spaceship.vx + 50
+        vy = spaceship.vy + 50
+
+        newBullets =
+          (makeBullet x y vx vy dirX dirY) :: bullets
+      in
+        { model |
+          bullets = newBullets
         }
 
     TogglePlay ->
@@ -185,7 +218,7 @@ update msg model =
 
     Tick delta ->
       let
-        { state, spaceship, asteroids, gameTime, timeSeed } = model
+        { state, spaceship, asteroids, bullets, gameTime, timeSeed } = model
 
         newState = state
 
@@ -212,11 +245,15 @@ update msg model =
           else
             tempSpaceship
 
+        newBullets =
+            List.map (stepBullet delta) bullets
+
       in
         { model |
           state = newState,
           spaceship = newSpaceship,
           asteroids = newAsteroids,
+          bullets = newBullets,
           gameTime = newTime
         }
 
@@ -228,20 +265,22 @@ make obj shape =
       |> move ( obj.x, obj.y )
       |> rotate obj.degree
 
-makeAsteroid: Asteroid -> Form
-makeAsteroid obj =
-  (oval 15 20)
+drawAsteroid: Asteroid -> Form
+drawAsteroid obj =
+  (oval 40 40)
     |> filled white
     |> move ( obj.x, obj.y )
 
-makeList: List Asteroid -> List Form
-makeList objs =
-  List.map makeAsteroid objs
+drawBullet: Bullet -> Form
+drawBullet obj =
+  (oval 15 15)
+    |> filled yellow
+    |> move ( obj.x, obj.y )
 
 blackGroundColor = rgb 0 0 0
 
-listDisplay: SpaceShip -> List Asteroid -> Element -> List Form
-listDisplay spaceship asteroids times=
+listDisplay: SpaceShip -> List Asteroid -> List Bullet -> Element -> List Form
+listDisplay spaceship asteroids bullets times=
   List.append
     ([
       rect gameWidth gameHeight
@@ -250,7 +289,7 @@ listDisplay spaceship asteroids times=
         |> make spaceship
       , toForm times
         |> move (0, gameHeight/2 - 40)
-    ]) (makeList asteroids)
+    ]) (List.append (List.map drawAsteroid asteroids) (List.map drawBullet bullets))
 
 
 txt f string =
@@ -263,26 +302,28 @@ txt f string =
 view : Model -> Html Msg
 view model =
   let
-    { spaceship, asteroids, gameTime, state } = model
+    { spaceship, asteroids, bullets, gameTime, state } = model
     times =
       txt (Text.height 50) (toString (floor (inMilliseconds gameTime)))
   in
     toHtml <|
-    container 1000 700 middle <|
-    collage gameWidth gameHeight (listDisplay spaceship asteroids times)
+    container 1300 700 middle <|
+    collage gameWidth gameHeight (listDisplay spaceship asteroids bullets times)
 
 
 
 
 keyboardProcessor down keyCode =
   case (down, keyCode) of
-    (True, 38) -> SpaceShip 0 0.5
-    (True, 40) -> SpaceShip 0 -0.5
+    (True, 38) -> SpaceShip 0 20
+    (True, 40) -> SpaceShip 0 -20
+    (False, 38) -> SpaceShip 0 0
+    (False, 40) -> SpaceShip 0 0
 
-    (True, 37) -> SpaceShip 0.1 0
-    (True, 39) -> SpaceShip -0.1 0
+    (True, 37) -> SpaceShip 0.08 0
+    (True, 39) -> SpaceShip -0.08 0
 
-    (False, 32) -> TogglePlay
+    (False, 32) -> ShootBullet
     _ -> NoOp
 
 
