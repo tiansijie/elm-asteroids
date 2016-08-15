@@ -14,7 +14,7 @@ import Random
 (gameWidth, gameHeight) = (800, 600)
 (halfWidth, halfHeight) = (gameWidth / 2, gameHeight / 2)
 
-type alias Object base =
+type alias General base =
     {
       base |
         x: Float,
@@ -24,18 +24,18 @@ type alias Object base =
         dirX: Float,
         dirY: Float,
         degree: Float
-}
+    }
 
 
 type alias Asteroid =
-  Object {}
+  General {}
 
 
 type alias Bullet =
-  Object {}
+  General {}
 
 type alias SpaceShip =
-  Object {a: Float}
+  General {a: Float}
 
 
 type State = Play | Pause
@@ -93,16 +93,24 @@ near : Float -> Float -> Float -> Bool
 near n c m =
     m >= n-c && m <= n+c
 
-
-within : SpaceShip -> Asteroid -> Bool
-within spaceship asteroid =
-    near spaceship.x 10 asteroid.x
-    && near spaceship.y 10 asteroid.y
-
+within : Float -> Float -> Float -> Float -> Bool
+within x1 y1 x2 y2 =
+    near x1 10 x2
+    && near y1 10 y2
 
 isCollided: SpaceShip -> List Asteroid -> Bool
 isCollided spaceship asteroids =
-  List.foldr (\asteroid prev -> prev || (within spaceship asteroid)) False asteroids
+  List.foldl (\asteroid prev -> prev || (within spaceship.x spaceship.y asteroid.x asteroid.y)) False asteroids
+
+isCollidedBullet: Bullet -> List Asteroid -> List Asteroid
+isCollidedBullet bullet asteroids =
+  List.foldl (\asteroid prev ->
+    if (within bullet.x bullet.y asteroid.x asteroid.y) then
+      prev
+    else
+      asteroid::prev
+    ) [] asteroids
+
 
 stepAsteroid : Time -> Asteroid -> Asteroid
 stepAsteroid t ({x, y, vx, vy, dirX, dirY} as asteroid) =
@@ -234,26 +242,43 @@ update msg model =
           floor (inMilliseconds timeSeed)
 
         newAsteroids =
-          if flooredTime % 10 == 0 then
+          if flooredTime % 2 == 0 then
             (generateAsteroid flooredTime) :: asteroids
           else
-            List.map (stepAsteroid delta) asteroids
+            asteroids
+
+        stepedAsteroid = List.map (stepAsteroid delta) newAsteroids
 
         newSpaceship =
-          if isCollided tempSpaceship newAsteroids then
+          if isCollided tempSpaceship stepedAsteroid then
             makespaceship 0 0
           else
             tempSpaceship
 
-        newBullets =
-            List.map (stepBullet delta) bullets
+        stepedBullets = List.map (stepBullet delta) bullets
+
+        finalUpdated =
+          List.foldl (\bullet prev ->
+              let
+                { prevBullets, prevAsteroids } = prev
+                currAsteroids = isCollidedBullet bullet prevAsteroids
+                updatedBulltes =
+                  if (List.length currAsteroids) /= (List.length prevAsteroids) then
+                    prevBullets
+                  else
+                    bullet::prevBullets
+              in { prev |
+                prevBullets = updatedBulltes,
+                prevAsteroids = currAsteroids
+              }
+            ) {prevBullets = [], prevAsteroids = stepedAsteroid} stepedBullets
 
       in
         { model |
           state = newState,
           spaceship = newSpaceship,
-          asteroids = newAsteroids,
-          bullets = newBullets,
+          asteroids = finalUpdated.prevAsteroids,
+          bullets = finalUpdated.prevBullets,
           gameTime = newTime
         }
 
@@ -320,8 +345,8 @@ keyboardProcessor down keyCode =
     (False, 38) -> SpaceShip 0 0
     (False, 40) -> SpaceShip 0 0
 
-    (True, 37) -> SpaceShip 0.08 0
-    (True, 39) -> SpaceShip -0.08 0
+    (True, 37) -> SpaceShip 0.3 0
+    (True, 39) -> SpaceShip -0.3 0
 
     (False, 32) -> ShootBullet
     _ -> NoOp

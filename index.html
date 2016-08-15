@@ -11177,9 +11177,9 @@ var _user$project$Main$drawBullet = function (obj) {
 		A2(
 			_evancz$elm_graphics$Collage$filled,
 			_elm_lang$core$Color$yellow,
-			A2(_evancz$elm_graphics$Collage$oval, 20, 20)));
+			A2(_evancz$elm_graphics$Collage$oval, 15, 15)));
 };
-var _user$project$Main$makeAsteroid = function (obj) {
+var _user$project$Main$drawAsteroid = function (obj) {
 	return A2(
 		_evancz$elm_graphics$Collage$move,
 		{ctor: '_Tuple2', _0: obj.x, _1: obj.y},
@@ -11187,9 +11187,6 @@ var _user$project$Main$makeAsteroid = function (obj) {
 			_evancz$elm_graphics$Collage$filled,
 			_elm_lang$core$Color$white,
 			A2(_evancz$elm_graphics$Collage$oval, 40, 40)));
-};
-var _user$project$Main$makeList = function (objs) {
-	return A2(_elm_lang$core$List$map, _user$project$Main$makeAsteroid, objs);
 };
 var _user$project$Main$make = F2(
 	function (obj, shape) {
@@ -11223,19 +11220,31 @@ var _user$project$Main$near = F3(
 	function (n, c, m) {
 		return (_elm_lang$core$Native_Utils.cmp(m, n - c) > -1) && (_elm_lang$core$Native_Utils.cmp(m, n + c) < 1);
 	});
-var _user$project$Main$within = F2(
-	function (spaceship, asteroid) {
-		return A3(_user$project$Main$near, spaceship.x, 10, asteroid.x) && A3(_user$project$Main$near, spaceship.y, 10, asteroid.y);
+var _user$project$Main$within = F4(
+	function (x1, y1, x2, y2) {
+		return A3(_user$project$Main$near, x1, 10, x2) && A3(_user$project$Main$near, y1, 10, y2);
 	});
 var _user$project$Main$isCollided = F2(
 	function (spaceship, asteroids) {
 		return A3(
-			_elm_lang$core$List$foldr,
+			_elm_lang$core$List$foldl,
 			F2(
 				function (asteroid, prev) {
-					return prev || A2(_user$project$Main$within, spaceship, asteroid);
+					return prev || A4(_user$project$Main$within, spaceship.x, spaceship.y, asteroid.x, asteroid.y);
 				}),
 			false,
+			asteroids);
+	});
+var _user$project$Main$isCollidedBullet = F2(
+	function (bullet, asteroids) {
+		return A3(
+			_elm_lang$core$List$foldl,
+			F2(
+				function (asteroid, prev) {
+					return A4(_user$project$Main$within, bullet.x, bullet.y, asteroid.x, asteroid.y) ? prev : A2(_elm_lang$core$List_ops['::'], asteroid, prev);
+				}),
+			_elm_lang$core$Native_List.fromArray(
+				[]),
 			asteroids);
 	});
 var _user$project$Main$generateAsteroid = function (seed) {
@@ -11334,7 +11343,7 @@ var _user$project$Main$listDisplay = F4(
 				]),
 			A2(
 				_elm_lang$core$List$append,
-				A2(_elm_lang$core$List$map, _user$project$Main$makeAsteroid, asteroids),
+				A2(_elm_lang$core$List$map, _user$project$Main$drawAsteroid, asteroids),
 				A2(_elm_lang$core$List$map, _user$project$Main$drawBullet, bullets)));
 	});
 var _user$project$Main$view = function (model) {
@@ -11434,7 +11443,7 @@ var _user$project$Main$update = F2(
 					model,
 					{timeSeed: _p8._0});
 			default:
-				var _p13 = _p8._0;
+				var _p14 = _p8._0;
 				var _p12 = model;
 				var state = _p12.state;
 				var spaceship = _p12.spaceship;
@@ -11443,27 +11452,49 @@ var _user$project$Main$update = F2(
 				var gameTime = _p12.gameTime;
 				var timeSeed = _p12.timeSeed;
 				var newState = state;
-				var newTime = gameTime + _p13;
-				var tempSpaceship = _elm_lang$core$Native_Utils.eq(state, _user$project$Main$Pause) ? spaceship : A3(_user$project$Main$stepSpaceShip, _p13, spaceship, asteroids);
+				var newTime = gameTime + _p14;
+				var tempSpaceship = _elm_lang$core$Native_Utils.eq(state, _user$project$Main$Pause) ? spaceship : A3(_user$project$Main$stepSpaceShip, _p14, spaceship, asteroids);
 				var flooredTime = _elm_lang$core$Basics$floor(
 					_elm_lang$core$Time$inMilliseconds(timeSeed));
 				var newAsteroids = _elm_lang$core$Native_Utils.eq(
-					A2(_elm_lang$core$Basics_ops['%'], flooredTime, 10),
+					A2(_elm_lang$core$Basics_ops['%'], flooredTime, 2),
 					0) ? A2(
 					_elm_lang$core$List_ops['::'],
 					_user$project$Main$generateAsteroid(flooredTime),
-					asteroids) : A2(
+					asteroids) : asteroids;
+				var stepedAsteroid = A2(
 					_elm_lang$core$List$map,
-					_user$project$Main$stepAsteroid(_p13),
-					asteroids);
-				var newSpaceship = A2(_user$project$Main$isCollided, tempSpaceship, newAsteroids) ? A2(_user$project$Main$makespaceship, 0, 0) : tempSpaceship;
-				var newBullets = A2(
+					_user$project$Main$stepAsteroid(_p14),
+					newAsteroids);
+				var newSpaceship = A2(_user$project$Main$isCollided, tempSpaceship, stepedAsteroid) ? A2(_user$project$Main$makespaceship, 0, 0) : tempSpaceship;
+				var stepedBullets = A2(
 					_elm_lang$core$List$map,
-					_user$project$Main$stepBullet(_p13),
+					_user$project$Main$stepBullet(_p14),
 					bullets);
+				var finalUpdated = A3(
+					_elm_lang$core$List$foldl,
+					F2(
+						function (bullet, prev) {
+							var _p13 = prev;
+							var prevBullets = _p13.prevBullets;
+							var prevAsteroids = _p13.prevAsteroids;
+							var currAsteroids = A2(_user$project$Main$isCollidedBullet, bullet, prevAsteroids);
+							var updatedBulltes = (!_elm_lang$core$Native_Utils.eq(
+								_elm_lang$core$List$length(currAsteroids),
+								_elm_lang$core$List$length(prevAsteroids))) ? prevBullets : A2(_elm_lang$core$List_ops['::'], bullet, prevBullets);
+							return _elm_lang$core$Native_Utils.update(
+								prev,
+								{prevBullets: updatedBulltes, prevAsteroids: currAsteroids});
+						}),
+					{
+						prevBullets: _elm_lang$core$Native_List.fromArray(
+							[]),
+						prevAsteroids: stepedAsteroid
+					},
+					stepedBullets);
 				return _elm_lang$core$Native_Utils.update(
 					model,
-					{state: newState, spaceship: newSpaceship, asteroids: newAsteroids, bullets: newBullets, gameTime: newTime});
+					{state: newState, spaceship: newSpaceship, asteroids: finalUpdated.prevAsteroids, bullets: finalUpdated.prevBullets, gameTime: newTime});
 		}
 	});
 var _user$project$Main$NoOp = {ctor: 'NoOp'};
@@ -11481,25 +11512,25 @@ var _user$project$Main$SpaceShip = F2(
 	});
 var _user$project$Main$keyboardProcessor = F2(
 	function (down, keyCode) {
-		var _p14 = {ctor: '_Tuple2', _0: down, _1: keyCode};
+		var _p15 = {ctor: '_Tuple2', _0: down, _1: keyCode};
 		_v4_7:
 		do {
-			if (_p14.ctor === '_Tuple2') {
-				if (_p14._0 === true) {
-					switch (_p14._1) {
+			if (_p15.ctor === '_Tuple2') {
+				if (_p15._0 === true) {
+					switch (_p15._1) {
 						case 38:
 							return A2(_user$project$Main$SpaceShip, 0, 20);
 						case 40:
 							return A2(_user$project$Main$SpaceShip, 0, -20);
 						case 37:
-							return A2(_user$project$Main$SpaceShip, 8.0e-2, 0);
+							return A2(_user$project$Main$SpaceShip, 0.3, 0);
 						case 39:
-							return A2(_user$project$Main$SpaceShip, -8.0e-2, 0);
+							return A2(_user$project$Main$SpaceShip, -0.3, 0);
 						default:
 							break _v4_7;
 					}
 				} else {
-					switch (_p14._1) {
+					switch (_p15._1) {
 						case 38:
 							return A2(_user$project$Main$SpaceShip, 0, 0);
 						case 40:
@@ -11529,7 +11560,7 @@ var _user$project$Main$main = {
 							[]));
 				}),
 			view: _user$project$Main$view,
-			subscriptions: function (_p15) {
+			subscriptions: function (_p16) {
 				return _elm_lang$core$Platform_Sub$batch(
 					_elm_lang$core$Native_List.fromArray(
 						[
@@ -11540,9 +11571,9 @@ var _user$project$Main$main = {
 							_elm_lang$keyboard$Keyboard$presses(
 							_user$project$Main$keyboardProcessor(true)),
 							_elm_lang$animation_frame$AnimationFrame$diffs(
-							function (_p16) {
+							function (_p17) {
 								return _user$project$Main$Tick(
-									_elm_lang$core$Time$inSeconds(_p16));
+									_elm_lang$core$Time$inSeconds(_p17));
 							}),
 							A2(_elm_lang$core$Time$every, _elm_lang$core$Time$second, _user$project$Main$TickTotal)
 						]));
