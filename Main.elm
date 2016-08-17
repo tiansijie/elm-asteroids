@@ -64,8 +64,8 @@ generateAsteroid seed =
   {
     x = fst (Random.step (Random.float -300 300) (Random.initialSeed seed)),
     y = fst (Random.step (Random.float -100 100) (Random.initialSeed (seed+1))),
-    vx = fst (Random.step (Random.float -30 30) (Random.initialSeed seed)),
-    vy = fst (Random.step (Random.float -30 30) (Random.initialSeed (seed+1))),
+    vx = fst (Random.step (Random.float -60 60) (Random.initialSeed seed)),
+    vy = fst (Random.step (Random.float -60 60) (Random.initialSeed (seed+1))),
     dirX = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed))),
     dirY = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed+1))),
     degree = 0
@@ -113,11 +113,20 @@ isCollidedBullet bullet asteroids =
 
 
 stepAsteroid : Time -> Asteroid -> Asteroid
-stepAsteroid t ({x, y, vx, vy, dirX, dirY} as asteroid) =
-  { asteroid |
-    x = x + vx * dirX * t,
-    y = y + vy * dirY * t
-  }
+stepAsteroid t asteroid =
+  let
+    {x, y, vx, vy, dirX, dirY} = asteroid
+
+    tempX = x + vx * dirX * t
+    tempY = y + vy * dirY * t
+
+    newX = updatePos tempX halfWidth
+    newY = updatePos tempY halfHeight
+  in
+    { asteroid |
+      x = newX,
+      y = newY
+    }
 
 stepBullet: Time -> Bullet -> Bullet
 stepBullet t ({x, y, vx, vy, dirX, dirY} as bullet) =
@@ -136,22 +145,22 @@ updatePos pos dim =
     pos
 
 
-stepSpaceShip: Time -> SpaceShip -> List Asteroid -> SpaceShip
-stepSpaceShip t spaceship asteroids=
+stepSpaceShip: Time -> SpaceShip -> SpaceShip
+stepSpaceShip t spaceship =
   let
     {x, y, vx, vy, dirX, dirY, a} = spaceship
 
-    newVx = t * a + vx
+    newVx = t * a * dirX + vx
 
-    newVy = t * a + vy
+    newVy = t * a * dirY + vy
 
-    tempX = x + newVx * t * dirX
+    tempX = x + newVx * t
 
-    tempY = y + newVy * t * dirY
+    tempY = y + newVy * t
 
-    newX = updatePos tempX (halfWidth)
+    newX = updatePos tempX halfWidth
 
-    newY = updatePos tempY (halfHeight)
+    newY = updatePos tempY halfHeight
   in
   { spaceship |
       x = newX,
@@ -186,7 +195,8 @@ update msg model =
         { model
           | spaceship =
             { spaceship
-              | dirX = dirX,
+              |
+                dirX = dirX,
                 dirY = dirY,
                 a = a',
                 degree = degree
@@ -200,8 +210,8 @@ update msg model =
         y = spaceship.y
         dirX = spaceship.dirX
         dirY = spaceship.dirY
-        vx = spaceship.vx + 50
-        vy = spaceship.vy + 50
+        vx = 350
+        vy = 350
 
         newBullets =
           (makeBullet x y vx vy dirX dirY) :: bullets
@@ -224,6 +234,7 @@ update msg model =
            timeSeed = now
         }
 
+
     Tick delta ->
       let
         { state, spaceship, asteroids, bullets, gameTime, timeSeed } = model
@@ -236,16 +247,17 @@ update msg model =
           if state == Pause then
             spaceship
           else
-            stepSpaceShip delta spaceship asteroids
+            stepSpaceShip delta spaceship
 
-        flooredTime =
-          floor (inMilliseconds timeSeed)
+        millisecondTime = round ((inMilliseconds newTime) * 100)
+        randomNum = fst (Random.step (Random.int 0 500) (Random.initialSeed millisecondTime))
 
         newAsteroids =
-          if flooredTime % 2 == 0 then
-            (generateAsteroid flooredTime) :: asteroids
+          if randomNum <= 2 then
+            (generateAsteroid millisecondTime) :: asteroids
           else
             asteroids
+
 
         stepedAsteroid = List.map (stepAsteroid delta) newAsteroids
 
@@ -329,7 +341,7 @@ view model =
   let
     { spaceship, asteroids, bullets, gameTime, state } = model
     times =
-      txt (Text.height 50) (toString (floor (inMilliseconds gameTime)))
+      txt (Text.height 50) (toString (floor (inMinutes gameTime)))
   in
     toHtml <|
     container 1300 700 middle <|
@@ -340,8 +352,8 @@ view model =
 
 keyboardProcessor down keyCode =
   case (down, keyCode) of
-    (True, 38) -> SpaceShip 0 20
-    (True, 40) -> SpaceShip 0 -20
+    (True, 38) -> SpaceShip 0 30
+    (True, 40) -> SpaceShip 0 -30
     (False, 38) -> SpaceShip 0 0
     (False, 40) -> SpaceShip 0 0
 
