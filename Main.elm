@@ -32,7 +32,7 @@ type alias Asteroid =
 
 
 type alias Bullet =
-  General {}
+  General {time: Time}
 
 type alias SpaceShip =
   General {a: Float}
@@ -56,18 +56,18 @@ makespaceship x y =
 
 makeBullet: Float -> Float -> Float -> Float -> Float -> Float -> Bullet
 makeBullet x y vx vy dirX dirY =
-  {x = x, y = y, vx = vx, vy = vy, dirX = dirX, dirY = dirY, degree = 0}
+  {x = x, y = y, vx = vx, vy = vy, dirX = dirX, dirY = dirY, degree = 0, time = 0}
 
 
 generateAsteroid: Int -> Asteroid
 generateAsteroid seed =
   {
     x = fst (Random.step (Random.float -300 300) (Random.initialSeed seed)),
-    y = fst (Random.step (Random.float -100 100) (Random.initialSeed (seed+1))),
-    vx = fst (Random.step (Random.float -60 60) (Random.initialSeed seed)),
-    vy = fst (Random.step (Random.float -60 60) (Random.initialSeed (seed+1))),
-    dirX = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed))),
-    dirY = fst (Random.step (Random.float -1 1) (Random.initialSeed (seed+1))),
+    y = fst (Random.step (Random.float -200 200) (Random.initialSeed (seed+1))),
+    vx = fst (Random.step (Random.float 20 60) (Random.initialSeed seed)),
+    vy = fst (Random.step (Random.float 20 60) (Random.initialSeed (seed+1))),
+    dirX = fst (Random.step (Random.float -3 3) (Random.initialSeed (seed))),
+    dirY = fst (Random.step (Random.float -3 3) (Random.initialSeed (seed+1))),
     degree = 0
   }
 
@@ -129,11 +129,23 @@ stepAsteroid t asteroid =
     }
 
 stepBullet: Time -> Bullet -> Bullet
-stepBullet t ({x, y, vx, vy, dirX, dirY} as bullet) =
-  { bullet |
-    x = x + vx * dirX * t,
-    y = y + vy * dirY * t
-  }
+stepBullet t bullet =
+  let
+    {x, y, vx, vy, dirX, dirY, time} = bullet
+
+    tempX = x + vx * dirX * t
+    tempY = y + vy * dirY * t
+
+    newX = updatePos tempX halfWidth
+    newY = updatePos tempY halfHeight
+
+    newTime = time + t
+  in
+    { bullet |
+      x = newX,
+      y = newY,
+      time = newTime
+    }
 
 updatePos: Float -> Float -> Float
 updatePos pos dim =
@@ -275,7 +287,7 @@ update msg model =
                 { prevBullets, prevAsteroids } = prev
                 currAsteroids = isCollidedBullet bullet prevAsteroids
                 updatedBulltes =
-                  if (List.length currAsteroids) /= (List.length prevAsteroids) then
+                  if (List.length currAsteroids) /= (List.length prevAsteroids) || (inMilliseconds bullet.time) > 2  then
                     prevBullets
                   else
                     bullet::prevBullets
@@ -298,7 +310,7 @@ update msg model =
 make: SpaceShip -> Shape -> Form
 make obj shape =
     shape
-      |> filled white
+      |> filled red
       |> move ( obj.x, obj.y )
       |> rotate obj.degree
 
