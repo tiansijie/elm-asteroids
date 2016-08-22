@@ -11338,8 +11338,8 @@ var _user$project$Main$stepSpaceShip = F2(
 			spaceship,
 			{x: newX, y: newY, vx: newVx, vy: newVy});
 	});
-var _user$project$Main$listDisplay = F4(
-	function (spaceship, asteroids, bullets, times) {
+var _user$project$Main$listDisplay = F3(
+	function (spaceship, asteroids, bullets) {
 		return A2(
 			_elm_lang$core$List$append,
 			_elm_lang$core$Native_List.fromArray(
@@ -11357,11 +11357,7 @@ var _user$project$Main$listDisplay = F4(
 								{ctor: '_Tuple2', _0: -10.0, _1: -10.0},
 								{ctor: '_Tuple2', _0: 0.0, _1: 50.0},
 								{ctor: '_Tuple2', _0: 10.0, _1: -10.0}
-							]))),
-					A2(
-					_evancz$elm_graphics$Collage$move,
-					{ctor: '_Tuple2', _0: 0, _1: (_user$project$Main$gameHeight / 2) - 40},
-					_evancz$elm_graphics$Collage$toForm(times))
+							])))
 				]),
 			A2(
 				_elm_lang$core$List$append,
@@ -11375,12 +11371,6 @@ var _user$project$Main$view = function (model) {
 	var bullets = _p5.bullets;
 	var gameTime = _p5.gameTime;
 	var state = _p5.state;
-	var times = A2(
-		_user$project$Main$txt,
-		_evancz$elm_graphics$Text$height(50),
-		_elm_lang$core$Basics$toString(
-			_elm_lang$core$Basics$floor(
-				_elm_lang$core$Time$inMinutes(gameTime))));
 	return _evancz$elm_graphics$Element$toHtml(
 		A4(
 			_evancz$elm_graphics$Element$container,
@@ -11391,7 +11381,7 @@ var _user$project$Main$view = function (model) {
 				_evancz$elm_graphics$Collage$collage,
 				_user$project$Main$gameWidth,
 				_user$project$Main$gameHeight,
-				A4(_user$project$Main$listDisplay, spaceship, asteroids, bullets, times))));
+				A3(_user$project$Main$listDisplay, spaceship, asteroids, bullets))));
 };
 var _user$project$Main$Model = F6(
 	function (a, b, c, d, e, f) {

@@ -328,16 +328,14 @@ drawBullet obj =
 
 blackGroundColor = rgb 0 0 0
 
-listDisplay: SpaceShip -> List Asteroid -> List Bullet -> Element -> List Form
-listDisplay spaceship asteroids bullets times=
+listDisplay: SpaceShip -> List Asteroid -> List Bullet -> List Form
+listDisplay spaceship asteroids bullets=
   List.append
     ([
       rect gameWidth gameHeight
         |> filled blackGroundColor
       , polygon [(-10.0, -10.0), (0.0, 50.0), (10.0, -10.0)]
         |> make spaceship
-      , toForm times
-        |> move (0, gameHeight/2 - 40)
     ]) (List.append (List.map drawAsteroid asteroids) (List.map drawBullet bullets))
 
 
@@ -352,12 +350,10 @@ view : Model -> Html Msg
 view model =
   let
     { spaceship, asteroids, bullets, gameTime, state } = model
-    times =
-      txt (Text.height 50) (toString (floor (inMinutes gameTime)))
   in
     toHtml <|
     container 1300 700 middle <|
-    collage gameWidth gameHeight (listDisplay spaceship asteroids bullets times)
+    collage gameWidth gameHeight (listDisplay spaceship asteroids bullets)
 
 
 
